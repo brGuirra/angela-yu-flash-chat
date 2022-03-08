@@ -16,11 +16,7 @@ class ChatViewController: UIViewController {
     
     let db = Firestore.firestore()
     
-    var messages = [
-        Message(sender: "1@2.com", body: "Hey!"),
-        Message(sender: "a@b", body: "Hello!"),
-        Message(sender: "1@2.com", body: "What's up?")
-    ]
+    var messages: [Message] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,6 +27,8 @@ class ChatViewController: UIViewController {
         navigationItem.hidesBackButton = true
         
         tableView.register(UINib(nibName: K.cellNibName, bundle: nil), forCellReuseIdentifier: K.cellIdentifier)
+        
+        loadMessages()
     }
     
     @IBAction func sendPressed(_ sender: UIButton) {
@@ -55,7 +53,34 @@ class ChatViewController: UIViewController {
         } catch let signOutError as NSError {
             print("Error signing out: %@", signOutError.localizedDescription)
         }
-    }    
+    }
+    
+    func loadMessages() {
+        messages = []
+        
+        db.collection(K.FStore.collectionName).getDocuments { [weak self] (querySnapshot, error) in
+            if let error = error {
+                print("There was an error retrieving data: \(error)")
+                return
+            }
+            
+            if let docs = querySnapshot?.documents {
+                for doc in docs {
+                    let data = doc.data()
+                    
+                    if let messageSender = data[K.FStore.senderField] as? String, let messageBody = data[K.FStore.bodyField] as? String {
+                        let newMessage = Message(sender: messageSender, body: messageBody)
+                        
+                        self?.messages.append(newMessage)
+                        
+                        DispatchQueue.main.async {
+                            self?.tableView.reloadData()
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 //MARK: - UITableViewDataSource

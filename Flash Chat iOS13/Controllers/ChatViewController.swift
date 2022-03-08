@@ -35,7 +35,8 @@ class ChatViewController: UIViewController {
         if let messageBody = messageTextfield.text, let messageSender = Auth.auth().currentUser?.email {
             db.collection(K.FStore.collectionName).addDocument(data: [
                 K.FStore.senderField: messageSender,
-                K.FStore.bodyField: messageBody]) { (error) in
+                K.FStore.bodyField: messageBody,
+                K.FStore.dateField: Date().timeIntervalSince1970]) { (error) in
                     if let error = error {
                         print("There was an error saving data: \(error.localizedDescription)")
                         return
@@ -56,30 +57,33 @@ class ChatViewController: UIViewController {
     }
     
     func loadMessages() {
-        db.collection(K.FStore.collectionName).addSnapshotListener { [weak self] (querySnapshot, error) in
-            self?.messages = []
-            
-            if let error = error {
-                print("There was an error retrieving data: \(error)")
-                return
-            }
-            
-            if let docs = querySnapshot?.documents {
-                for doc in docs {
-                    let data = doc.data()
-                    
-                    if let messageSender = data[K.FStore.senderField] as? String, let messageBody = data[K.FStore.bodyField] as? String {
-                        let newMessage = Message(sender: messageSender, body: messageBody)
+        db.collection(K.FStore.collectionName)
+            .order(by: K.FStore.dateField)
+            .addSnapshotListener { [weak self] (querySnapshot, error) in
+                
+                self?.messages = []
+                
+                if let error = error {
+                    print("There was an error retrieving data: \(error)")
+                    return
+                }
+                
+                if let docs = querySnapshot?.documents {
+                    for doc in docs {
+                        let data = doc.data()
                         
-                        self?.messages.append(newMessage)
-                        
-                        DispatchQueue.main.async {
-                            self?.tableView.reloadData()
+                        if let messageSender = data[K.FStore.senderField] as? String, let messageBody = data[K.FStore.bodyField] as? String {
+                            let newMessage = Message(sender: messageSender, body: messageBody)
+                            
+                            self?.messages.append(newMessage)
+                            
+                            DispatchQueue.main.async {
+                                self?.tableView.reloadData()
+                            }
                         }
                     }
                 }
             }
-        }
     }
 }
 

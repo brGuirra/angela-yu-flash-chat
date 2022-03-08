@@ -56,9 +56,9 @@ class ChatViewController: UIViewController {
     }
     
     func loadMessages() {
-        messages = []
-        
-        db.collection(K.FStore.collectionName).getDocuments { [weak self] (querySnapshot, error) in
+        db.collection(K.FStore.collectionName).addSnapshotListener { [weak self] (querySnapshot, error) in
+            self?.messages = []
+            
             if let error = error {
                 print("There was an error retrieving data: \(error)")
                 return

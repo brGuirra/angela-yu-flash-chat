@@ -36,13 +36,15 @@ class ChatViewController: UIViewController {
             db.collection(K.FStore.collectionName).addDocument(data: [
                 K.FStore.senderField: messageSender,
                 K.FStore.bodyField: messageBody,
-                K.FStore.dateField: Date().timeIntervalSince1970]) { (error) in
+                K.FStore.dateField: Date().timeIntervalSince1970]) { [weak self] (error) in
                     if let error = error {
                         print("There was an error saving data: \(error.localizedDescription)")
                         return
                     }
                     
-                    print("Successfully saved data.")
+                    DispatchQueue.main.async {
+                        self?.messageTextfield.text = ""
+                    }
                 }
         }
     }
@@ -60,8 +62,9 @@ class ChatViewController: UIViewController {
         db.collection(K.FStore.collectionName)
             .order(by: K.FStore.dateField)
             .addSnapshotListener { [weak self] (querySnapshot, error) in
+                guard let strongSelf = self else { return }
                 
-                self?.messages = []
+                strongSelf.messages = []
                 
                 if let error = error {
                     print("There was an error retrieving data: \(error)")
@@ -75,10 +78,12 @@ class ChatViewController: UIViewController {
                         if let messageSender = data[K.FStore.senderField] as? String, let messageBody = data[K.FStore.bodyField] as? String {
                             let newMessage = Message(sender: messageSender, body: messageBody)
                             
-                            self?.messages.append(newMessage)
+                            strongSelf.messages.append(newMessage)
                             
                             DispatchQueue.main.async {
-                                self?.tableView.reloadData()
+                                strongSelf.tableView.reloadData()
+                                let indexPath = IndexPath(row: strongSelf.messages.count - 1, section: 0)
+                                strongSelf.tableView.scrollToRow(at: indexPath, at: .top, animated: false)
                             }
                         }
                     }
@@ -100,6 +105,19 @@ extension ChatViewController: UITableViewDataSource {
         let message = messages[indexPath.row]
         
         cell.label.text = message.body
+        
+        if message.sender == Auth.auth().currentUser?.email {
+            cell.leftImageView.isHidden = true
+            cell.rightImageView.isHidden = false
+            cell.messageBubble.backgroundColor = UIColor(named: K.BrandColors.lightPurple)
+            cell.label.textColor = UIColor(named: K.BrandColors.purple)
+        } else {
+            cell.leftImageView.isHidden = false
+            cell.rightImageView.isHidden = true
+            cell.messageBubble.backgroundColor = UIColor(named: K.BrandColors.purple)
+            cell.label.textColor = UIColor(named: K.BrandColors.lightPurple)
+        }
+        
         return cell
     }
 }

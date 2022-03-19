@@ -106,6 +106,8 @@ extension ChatViewController: UITableViewDataSource {
         
         cell.label.text = message.body
         
+        print(Auth.auth().currentUser?.email)
+        
         if message.sender == Auth.auth().currentUser?.email {
             cell.leftImageView.isHidden = true
             cell.rightImageView.isHidden = false
